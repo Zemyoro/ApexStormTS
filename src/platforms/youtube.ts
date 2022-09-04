@@ -1,69 +1,94 @@
-// YouTube module for ApexStorm
+// YouTube module
+// Created for ApexStorm
+// By Zemyoro
 
-import ytdlHandler from '../handlers/ytdl';
+import select from 'cli-select';
+import download from '../ytdl';
 import search from 'yt-search';
 import ytdl from 'ytdl-core';
 import { get } from 'prompt';
-import { main } from '..';
 import { Media } from '.';
+import Main from '..';
 
-export default async () => {
+export default function () {
     require('console-clear')(true);
 
-    const media: Media[] = [];
-    return get(['URL'], async (err, result: { URL: string }) => {
-        return youtube(media, result.URL);
+    console.log('Provide a YouTube URL or search query');
+    return get(['Query'], (err, result: { Query: string }) => {
+        return YouTubeProcessor(result.Query);
     });
 }
 
-export async function youtube(media: Media[], URL: string) {
-    console.log('Processing information...');
+export async function YouTubeProcessor(query: string) {
+    console.log('Processing query...');
+    const media: Media[] = [];
 
-    if (ytdl.validateURL(URL) && URL.includes('watch?v=')) {
-        const videoMedia = await search({ videoId: URL.split('watch?v=')[1] });
-        if (!videoMedia) {
-            console.log('Video does not exist.');
+    if (ytdl.validateURL(query) && query.includes('watch?v=')) {
+        const video = await search({ videoId: query.split('watch?v=')[1] });
+        if (!video) {
+            console.log('The provided video doesn\'t exist');
             return setTimeout(() => {
-                return main();
-            }, 5_000);
+                Main();
+            });
         }
 
         media.push({
-            title: videoMedia.title,
-            URL: URL
+            title: video.title,
+            URL: query
         });
-    } else if (URL.includes('playlist?list=')) {
-        const playlistMedia = await search({ listId: URL.split('playlist?list=')[1] });
-        if (!playlistMedia || !playlistMedia.videos.length) {
-            console.log('Playlist does not exist or does not contain any media.');
+    } else if (query.includes('playlist?list=')) {
+        const playlist = await search({ listId: query.split('playlist?list=')[1] });
+        if (!playlist || !playlist.videos.length) {
+            console.log('Provided playlist doesn\'t exist or contains no media');
             return setTimeout(() => {
-                return main();
+                Main();
             }, 5_000);
         }
+        console.log(playlist.videos.length);
 
-        const playlistVideos = playlistMedia.videos.slice(0, playlistMedia.videos.length >= 100 ? 100 : playlistMedia.videos.length - 1);
-        for (const video of playlistVideos) {
+        const playlistItems = playlist.videos
+            .slice(0, playlist.videos.length > 100 ? 99 : playlist.videos.length);
+        for (const item of playlistItems) {
             media.push({
-                title: video.title,
-                URL: `https://youtube.com/watch?v=${video.videoId}`
+                title: item.title,
+                URL: `https://youtube.com/watch?v=${item.videoId}`
             });
         }
     } else {
-        console.log('Attempting search...');
+        require('console-clear')(true);
+        console.log('Searching...');
 
-        const searchMedia = await search({ search: URL });
-        if (!searchMedia || !searchMedia.videos.length) {
-            console.log('This search does not have any valid media.');
+        // Values will store
+        // - Video title
+        // - Video author
+        const values: string[] = [];
+        const searchItems = await search({ search: query });
+        if (!searchItems || !searchItems.videos.length) {
+            console.log('This search did not have any media');
             return setTimeout(() => {
-                return main();
+                Main();
             }, 5_000);
         }
 
-        media.push({
-            title: searchMedia.videos[0].title,
-            URL: searchMedia.videos[0].url
-        });
+        for (const i in searchItems.videos) {
+            values.push(`${searchItems.videos[i].title} by ${searchItems.videos[i].author.name}`);
+            if (parseInt(i) === 9) break;
+        }
+
+        require('console-clear')(true);
+        console.log('Select result to download');
+
+        return select({
+            values
+        }).then(choice => {
+            media.push({
+                title: searchItems.videos[parseInt(`${choice.id}`)].title,
+                URL: searchItems.videos[parseInt(`${choice.id}`)].url
+            });
+
+            return download(media);
+        }).catch(() => process.exit(0));
     }
 
-    return ytdlHandler(media)
+    return download(media);
 }

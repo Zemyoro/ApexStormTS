@@ -1,14 +1,14 @@
-import other from './other';
-import spotify from './spotify';
 import youtube from './youtube';
+import spotify from './spotify';
+import other from './other';
 
 export default {
-    spotify,
     youtube,
+    spotify,
     other
 }
 
 export interface Media {
-    title: string,
-    URL: string
+    title: string;
+    URL: string;
 }

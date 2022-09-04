@@ -1,29 +1,32 @@
-// Other module for ApexStorm
+// Other module
+// Created for ApexStorm
+// By Zemyoro
 
+import { YouTubeProcessor } from './youtube';
+import { SpotifyProcessor } from './spotify';
 import { getLinks } from 'songlink-api';
-import { spotify } from './spotify';
-import { youtube } from './youtube';
 import { get } from 'prompt';
-import { main } from '..';
+import main from '..';
 
-export default () => {
+export default function () {
     require('console-clear')(true);
 
-    return get(['URL'], async (err, result: { URL: string }) => {
-        console.log('Processing information...');
+    console.log('Provide a link');
+    return get(['URL'], (err, result: { URL: string }) => {
+        console.log('Processing link...');
 
         return getLinks({ url: result.URL })
             .then(response => {
                 if (response.linksByPlatform.youtube.url) {
-                    return youtube([], response.linksByPlatform.youtube.url);
+                    return YouTubeProcessor(response.linksByPlatform.youtube.url);
                 }
 
                 if (response.linksByPlatform.spotify) {
-                    return spotify(response.linksByPlatform.spotify.url);
+                    return SpotifyProcessor(response.linksByPlatform.spotify.url);
                 }
             })
             .catch(() => {
-                console.log('No media found for the provided link!');
+                console.log('There was no valid media for the provided link! Returning to main...');
                 return setTimeout(() => {
                     return main();
                 }, 5_000);

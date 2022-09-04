@@ -1,42 +1,33 @@
 import platforms from './platforms';
-import cliSelect from 'cli-select';
+import select from 'cli-select';
 import 'dotenv/config';
 
-export const main = () => {
+export default function Main() {
     require('console-clear')(true);
 
-    switch (process.env.DOWNLOAD_TYPE) {
-        case 'mp3':
-            break;
-        case 'mp4':
-            break;
-        default:
-            return console.log('Download type has to explicity be mp3 or mp4.');
-    }
+    console.log('Select a platform (Search with YouTube)');
 
-    cliSelect({
-        values: ['Search', 'YouTube', 'Spotify', 'Other'],
-        cleanup: true,
-        valueRenderer(value) {
-            return value;
-        }
-    }).then((choice) => {
+    select({
+        values: [
+            'YouTube',
+            'Spotify',
+            'Other'
+        ]
+    }).then(choice => {
         switch (choice.id) {
             case 0:
                 return platforms.youtube();
             case 1:
-                return platforms.youtube();
-            case 2:
                 return platforms.spotify();
-            case 3:
+            case 2:
                 return platforms.other();
         }
-    }).catch(() => null);
+    }).catch(() => process.exit(0));
 }
 
-export const spotifyapi = new (require('node-spotify-api'))({
+export const Spotify = new (require('node-spotify-api'))({
     id: process.env.SPOTIFY_ID,
     secret: process.env.SPOTIFY_SECRET
 })
 
-main();
+Main();
